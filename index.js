@@ -12,26 +12,27 @@ let clientes = [];
 try {
 const data = fs.readFileSync(path.join(__dirname, 'clientes.json'), 'utf8');
 clientes = JSON.parse(data);
-console.log(`Base de clientes cargada: ${clientes.length} registros`);
+console.log('Base de clientes cargada: ' + clientes.length + ' registros');
 } catch (e) {
 console.error('No se pudo cargar clientes.json:', e.message);
 }
-// ─── ENDPOINT CONSULTA CLIENTE ───────────────────────────────────────────────
-app.get('/cliente', (req, res) => {
-const { dni, nombre } = req.query;
+// ENDPOINT CONSULTA CLIENTE
+app.get('/cliente', function(req, res) {
+var dni = req.query.dni;
+var nombre = req.query.nombre;
 if (!dni && !nombre) {
-return res.status(400).json({ error: 'Parámetro dni o nombre requerido' });
+return res.status(400).json({ error: 'Parametro dni o nombre requerido' });
 }
-let cliente = null;
+var cliente = null;
 if (dni) {
-const dniBuscar = dni.replace(/\D/g, '').trim();
-cliente = clientes.find(c => c.dni === dniBuscar);
+var dniBuscar = dni.replace(/\D/g, '').trim();
+cliente = clientes.find(function(c) { return c.dni === dniBuscar; });
 }
 if (!cliente && nombre) {
-const nombreBuscar = nombre.toLowerCase().trim();
-cliente = clientes.find(c =>
-c.nombre.toLowerCase().includes(nombreBuscar)
-);
+var nombreBuscar = nombre.toLowerCase().trim();
+cliente = clientes.find(function(c) {
+return c.nombre.toLowerCase().indexOf(nombreBuscar) !== -1;
+});
 }
 if (!cliente) {
 return res.status(404).json({ encontrado: false, mensaje: 'Cliente no encontrado' });
@@ -42,26 +43,26 @@ nombre: cliente.nombre,
 dni: cliente.dni,
 nro_suscripcion: cliente.nro_suscripcion,
 plan: cliente.plan,
-valor_nominal: `$${Number(cliente.valor_nominal).toLocaleString('es-AR')}`,
+valor_nominal: cliente.valor_nominal,
 cuotas_emitidas: cliente.cuotas_emitidas,
 cuotas_pagas: cliente.cuotas_pagas,
 estado: cliente.estado
 });
 });
-// ─── WEBHOOK ZENVIA ──────────────────────────────────────────────────────────
-app.post('/webhook', async (req, res) => {
+// WEBHOOK ZENVIA
+app.post('/webhook', async function(req, res) {
 res.sendStatus(200);
-const msg = req.body;
-const userPhone = msg.from;
-const userText = msg.contents?.[0]?.text;
+var msg = req.body;
+var userPhone = msg.from;
+var userText = msg.contents && msg.contents[0] && msg.contents[0].text;
 if (!userText) return;
 try {
-const claudeRes = await axios.post(
+var claudeRes = await axios.post(
 'https://api.anthropic.com/v1/messages',
 {
 model: 'claude-sonnet-4-20250514',
 max_tokens: 1024,
-system: `Sos Sebastián Correa, asesor de Autocrédito. Respondés por WhatsApp de forma messages: [{ role: 'user', content: userText }]
+system: 'Sos Sebastian Correa, asesor de Autocredito. Respondés por WhatsApp de forma messages: [{ role: 'user', content: userText }]
 },
 {
 headers: {
@@ -71,7 +72,7 @@ headers: {
 }
 }
 );
-const reply = claudeRes.data.content[0].text;
+var reply = claudeRes.data.content[0].text;
 await axios.post(
 'https://api.zenvia.com/v2/channels/whatsapp/messages',
 {
@@ -87,7 +88,7 @@ headers: {
 }
 );
 } catch (error) {
-console.error('Error:', error.response?.data || error.message);
+console.error('Error:', error.response && error.response.data || error.message);
 }
 });
-app.listen(3000, () => console.log('Servidor corriendo'));
+app.listen(3000, function() { console.log('Servidor corriendo'); });
